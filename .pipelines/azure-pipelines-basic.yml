@@ -1,0 +1,45 @@
+trigger:
+  - main
+
+pool:
+  vmImage: 'windows-latest'
+
+variables:
+  buildConfiguration: 'release'
+
+steps:
+  - task: Maven@4
+    displayName: 'Maven Clean Compile'
+    inputs:
+      mavenPomFile: 'pom.xml'
+      mavenGoals: 'clean compile'
+      jdkVersionOption: '11'
+      publishJUnitResults: false
+
+  - task: Maven@4
+    displayName: 'Maven Run Tests'
+    inputs:
+      mavenPomFile: 'pom.xml'
+      mavenGoals: 'clean test -Dbrowser=chrome -Dheadless=true'
+      jdkVersionOption: '11'
+      publishJUnitResults: true
+      testResultsFiles: '**/target/surefire-reports/TEST-*.xml'
+      goals: 'test'
+
+  - task: PublishTestResults@2
+    displayName: 'Publish Test Results'
+    condition: always()
+    inputs:
+      testResultsFormat: 'JUnit'
+      testResultsFiles: '**/target/surefire-reports/TEST-*.xml'
+      mergeTestResults: true
+      failTaskOnFailedTests: false
+      testRunTitle: 'Cucumber Test Results'
+
+  - task: PublishBuildArtifacts@1
+    displayName: 'Publish Test Reports Artifacts'
+    condition: always()
+    inputs:
+      PathtoPublish: '$(System.DefaultWorkingDirectory)/reports'
+      ArtifactName: 'test-reports'
+      publishLocation: 'Container'

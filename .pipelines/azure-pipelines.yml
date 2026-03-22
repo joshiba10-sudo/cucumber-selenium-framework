@@ -1,0 +1,162 @@
+trigger:
+  - main
+  - develop
+
+pr:
+  - main
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  buildConfiguration: 'release'
+  MAVEN_CACHE_FOLDER: $(Pipeline.Workspace)/.m2/repository
+  MAVEN_OPTS: '-Dmaven.repo.local=$(MAVEN_CACHE_FOLDER)'
+
+stages:
+  - stage: Build
+    displayName: 'Build and Compile'
+    jobs:
+      - job: BuildJob
+        displayName: 'Build Maven Project'
+        steps:
+          - task: UseMaven@1
+            inputs:
+              mavenVersionOption: 'Default'
+              mavenAuthenticateFeed: false
+              effectivePomSkip: false
+              sonarQubeRunAnalysis: false
+
+          - task: Maven@4
+            displayName: 'Maven Clean compile'
+            inputs:
+              mavenPomFile: 'pom.xml'
+              mavenGoals: 'clean compile'
+              jdkVersionOption: '11'
+              jdkArchitectureOption: 'x64'
+              publishJUnitResults: false
+              goals: 'clean compile'
+
+          - task: PublishBuildArtifacts@1
+            displayName: 'Publish Build Artifacts'
+            inputs:
+              PathtoPublish: '$(Build.ArtifactStagingDirectory)'
+              ArtifactName: 'build-artifacts'
+              publishLocation: 'Container'
+
+  - stage: Test
+    displayName: 'Run Automation Tests'
+    dependsOn: Build
+    condition: succeeded()
+    jobs:
+      - job: TestJob
+        displayName: 'Execute Cucumber Tests'
+        steps:
+          - task: Maven@4
+            displayName: 'Maven Test Execution'
+            inputs:
+              mavenPomFile: 'pom.xml'
+              mavenGoals: 'test'
+              jdkVersionOption: '11'
+              jdkArchitectureOption: 'x64'
+              publishJUnitResults: true
+              testResultsFiles: '**/target/surefire-reports/TEST-*.xml'
+              goals: 'test -Dbrowser=chrome -Dheadless=true'
+
+          # Publish test results to Azure DevOps
+          - task: PublishTestResults@2
+            displayName: 'Publish Test Results'
+            condition: always()
+            inputs:
+              testResultsFormat: 'JUnit'
+              testResultsFiles: '**/target/surefire-reports/TEST-*.xml'
+              searchFolder: '$(System.DefaultWorkingDirectory)'
+              mergeTestResults: true
+              failTaskOnFailedTests: false
+              testRunTitle: 'Cucumber Test Execution Report'
+              publishRunAttachments: true
+
+          # Publish Cucumber Report
+          - task: PublishBuildArtifacts@1
+            displayName: 'Publish Test Reports'
+            condition: always()
+            inputs:
+              PathtoPublish: '$(System.DefaultWorkingDirectory)/reports'
+              ArtifactName: 'test-reports'
+              publishLocation: 'Container'
+
+          # Publish Screenshots
+          - task: PublishBuildArtifacts@1
+            displayName: 'Publish Screenshots'
+            condition: always()
+            inputs:
+              PathtoPublish: '$(System.DefaultWorkingDirectory)/reports/screenshots'
+              ArtifactName: 'screenshots'
+              publishLocation: 'Container'
+
+          # Publish Logs
+          - task: PublishBuildArtifacts@1
+            displayName: 'Publish Logs'
+            condition: always()
+            inputs:
+              PathtoPublish: '$(System.DefaultWorkingDirectory)/reports/logs'
+              ArtifactName: 'logs'
+              publishLocation: 'Container'
+
+  - stage: Report
+    displayName: 'Generate Reports'
+    dependsOn: Test
+    condition: always()
+    jobs:
+      - job: ReportJob
+        displayName: 'Process Test Reports'
+        steps:
+          - task: Maven@4
+            displayName: 'Generate Cucumber Report'
+            inputs:
+              mavenPomFile: 'pom.xml'
+              mavenGoals: 'cucumber:report'
+              jdkVersionOption: '11'
+              jdkArchitectureOption: 'x64'
+              publishJUnitResults: false
+
+          # Parse and display test summary
+          - script: |
+              echo "Test Execution Summary:"
+              if [ -f "reports/cucumber.xml" ]; then
+                echo "Cucumber Report Generated: reports/cucumber.xml"
+              fi
+              if [ -d "reports/screenshots" ]; then
+                echo "Screenshots captured in: reports/screenshots"
+              fi
+            displayName: 'Display Test Summary'
+            condition: always()
+
+  - stage: Notify
+    displayName: 'Send Notifications'
+    dependsOn: Report
+    condition: always()
+    jobs:
+      - job: NotifyJob
+        displayName: 'Notify Test Results'
+        steps:
+          - script: |
+              echo "Pipeline Status: $(Agent.JobStatus)"
+              echo "Build Number: $(Build.BuildNumber)"
+              echo "Build URL: $(System.CollectionUri)$(System.TeamProject)/_build/results?buildId=$(Build.BuildId)"
+            displayName: 'Pipeline Notification'
+            condition: always()
+
+          # Optional: Send email notification
+          - task: SendEmail@1
+            displayName: 'Send Email Notification'
+            condition: failed()
+            inputs:
+              To: 'qa-team@example.com'
+              Subject: 'Automation Test Execution Failed - Build $(Build.BuildNumber)'
+              Body: |
+                Build $(Build.BuildNumber) has failed automation tests.
+                Build URL: $(System.CollectionUri)$(System.TeamProject)/_build/results?buildId=$(Build.BuildId)
+                Check the artifacts for detailed reports and screenshots.
+              SmtpServer: 'smtp.example.com'
+              SmtpPort: '25'
