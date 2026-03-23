@@ -247,6 +247,9 @@ public class ContactPage extends BasePage {
     public void submitForm() {
         LOGGER.info("Submitting contact form");
         try {
+            // Scroll into view before clicking to avoid element intercepted error
+            scrollToElement(submitButtonLocator);
+            Thread.sleep(500); // Brief pause to allow page to settle
             click(submitButtonLocator);
             LOGGER.info("Form submitted successfully");
         } catch (Exception e) {
