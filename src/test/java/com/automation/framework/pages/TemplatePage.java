@@ -88,8 +88,5 @@ public class TemplatePage extends BasePage {
         return getText(errorMessage);
     }
 
-    // Add more page-specific methods as needed
-    // Remember: Keep page object methods simple and focused on one action
-    // Example: enterUsername(), enterPassword(), clickLogin() instead of login()
-    // This allows for flexible step definitions
+    
 }

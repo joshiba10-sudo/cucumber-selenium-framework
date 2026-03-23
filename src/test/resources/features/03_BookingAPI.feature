@@ -1,7 +1,7 @@
 Feature: Shady Meadows B&B Booking API Testing
 
-   //Background:
-    // Given Base API URL is set to "https://automationintesting.online/api"
+  # Background:
+  #   Given Base API URL is set to "https://automationintesting.online/api"
 
   @smoke @api @regression
   Scenario: Get list of all available rooms
@@ -23,6 +23,30 @@ Feature: Shady Meadows B&B Booking API Testing
     Then API response status code should be 200
     And Response should contain available rooms
     And Available rooms list should not be empty
+
+  @api @positive
+  Scenario: Check room availability for single night stay
+    When User requests to check room availability with checkin "2025-07-20" and checkout "2025-07-21"
+    Then API response status code should be 200
+    And Response should contain available rooms
+
+  @api @positive
+  Scenario: Check room availability for far future dates
+    When User requests to check room availability with checkin "2026-12-15" and checkout "2026-12-20"
+    Then API response status code should be 200
+    And Response should contain available rooms
+
+  @api @negative
+  Scenario: Check room availability with checkout before checkin
+    When User requests to check room availability with checkin "2025-07-25" and checkout "2025-07-20"
+    Then API response status code should be 400
+    And Response should indicate invalid date range
+
+  @api @negative
+  Scenario: Check room availability with same checkin and checkout date
+    When User requests to check room availability with checkin "2025-07-20" and checkout "2025-07-20"
+    Then API response status code should be 400
+    And Response should indicate minimum stay requirement
 
   @smoke @api
   Scenario: Create a new booking with valid details
@@ -122,6 +146,45 @@ Feature: Shady Meadows B&B Booking API Testing
       | Jane      | Double   | jane@test.com   | 2      | 2025-08-01 | 2025-08-05 | true    |
       | Tom       | Suite    | tom@test.com    | 3      | 2025-09-10 | 2025-09-15 | false   |
 
+  @api @positive
+  Scenario: Create booking for extended stay (more than 7 days)
+    When User creates a new booking with following details:
+      | firstname   | Extended       |
+      | lastname    | Stay           |
+      | email       | extended@test.com |
+      | phone       | 07358480691    |
+      | roomid      | 1              |
+      | checkin     | 2025-07-17     |
+      | checkout    | 2025-07-31     |
+      | depositpaid | true           |
+    Then API response status code should be 201
+    And Response should contain booking ID
+    And Response should indicate extended booking
+
+  @api @positive
+  Scenario: Create multiple bookings sequentially and verify all exist
+    When User creates a new booking with following details:
+      | firstname   | First       |
+      | lastname    | Booking     |
+      | email       | first@test.com |
+      | phone       | 07358480692 |
+      | roomid      | 1          |
+      | checkin     | 2025-10-01 |
+      | checkout    | 2025-10-03 |
+      | depositpaid | false      |
+    And User stores the booking ID from response
+    And User creates a new booking with following details:
+      | firstname   | Second      |
+      | lastname    | Booking     |
+      | email       | second@test.com |
+      | phone       | 07358480693 |
+      | roomid      | 2          |
+      | checkin     | 2025-10-05 |
+      | checkout    | 2025-10-07 |
+      | depositpaid | true       |
+    Then API response status code should be 201
+    And First booking should still exist in the system
+
   @api @regression
   Scenario: Verify booking dates validation
     When User creates a new booking with checkout date "2025-07-17" and checkin date "2025-07-18"
@@ -143,6 +206,90 @@ Feature: Shady Meadows B&B Booking API Testing
     Then API response should indicate missing required fields
     And Error response should be returned
 
+  @api @negative
+  Scenario: Create booking with invalid room ID
+    When User creates a new booking with following details:
+      | firstname   | John       |
+      | lastname    | Doe        |
+      | email       | john@email.com |
+      | phone       | 07358480685    |
+      | roomid      | 9999       |
+      | checkin     | 2025-07-17 |
+      | checkout    | 2025-07-18 |
+      | depositpaid | false      |
+    Then API response status code should be 400
+    And Response should indicate invalid room ID
+
+  @api @negative
+  Scenario: Create booking with past dates
+    When User creates a new booking with following details:
+      | firstname   | John       |
+      | lastname    | Doe        |
+      | email       | john@email.com |
+      | phone       | 07358480685    |
+      | roomid      | 1          |
+      | checkin     | 2020-01-01 |
+      | checkout    | 2020-01-02 |
+      | depositpaid | false      |
+    Then API response status code should be 400
+    And Response should indicate invalid date
+
+  @api @negative
+  Scenario: Create booking with invalid email format
+    When User creates a new booking with following details:
+      | firstname   | John       |
+      | lastname    | Doe        |
+      | email       | invalid-email |
+      | phone       | 07358480685    |
+      | roomid      | 1          |
+      | checkin     | 2025-07-17 |
+      | checkout    | 2025-07-18 |
+      | depositpaid | false      |
+    Then API response status code should be 400
+    And Response should indicate invalid email format
+
+  @api @negative
+  Scenario: Create booking with invalid phone format
+    When User creates a new booking with following details:
+      | firstname   | John       |
+      | lastname    | Doe        |
+      | email       | john@email.com |
+      | phone       | invalid    |
+      | roomid      | 1          |
+      | checkin     | 2025-07-17 |
+      | checkout    | 2025-07-18 |
+      | depositpaid | false      |
+    Then API response status code should be 400
+    And Response should indicate invalid phone format
+
+  @api @negative
+  Scenario: Admin authentication with invalid credentials
+    When User authenticates as admin with username "admin" and password "wrongpassword"
+    Then API response status code should be 401
+    And Response should indicate unauthorized access
+    And Response should not contain authentication token
+
+  @api @negative
+  Scenario: Update booking with invalid booking ID
+    When User attempts to update booking with ID "99999" with following details:
+      | firstname   | James      |
+      | lastname    | Updated    |
+      | depositpaid | true       |
+    Then API response status code should be 404
+    And Response should indicate booking not found
+
+  @api @negative
+  Scenario: Delete booking with invalid booking ID
+    When User attempts to delete booking with ID "99999"
+    Then API response status code should be 404
+    And Response should indicate booking not found
+
+  @api @negative
+  Scenario: Get room details with invalid room ID
+    When User requests to get room details for roomid "9999"
+    Then API response status code should be 404
+    And Response should indicate room not found
+
   # ==================== Contact API Scenarios ====================
 
   @api @contact @regression
@@ -155,6 +302,72 @@ Feature: Shady Meadows B&B Booking API Testing
     Then API response status code should be 400
     And Response should indicate name is required
     And Error message should contain "name"
+
+  @api @contact @negative
+  Scenario: Contact form missing required field - email
+    When User submits a contact form with the following details:
+      | name    | John Doe          |
+      | phone   | 07358480688       |
+      | subject | Test Subject      |
+      | message | Testing missing email |
+    Then API response status code should be 400
+    And Response should indicate email is required
+    And Error message should contain "email"
+
+  @api @contact @negative
+  Scenario: Contact form missing required field - phone
+    When User submits a contact form with the following details:
+      | name    | John Doe          |
+      | email   | john@example.com  |
+      | subject | Test Subject      |
+      | message | Testing missing phone |
+    Then API response status code should be 400
+    And Response should indicate phone is required
+    And Error message should contain "phone"
+
+  @api @contact @negative
+  Scenario: Contact form with message less than minimum length
+    When User submits a contact form with the following details:
+      | name    | John Doe          |
+      | email   | john@example.com  |
+      | phone   | 07358480688       |
+      | subject | Test Subject      |
+      | message | short |
+    Then API response status code should be 400
+    And Response should indicate message is too short
+
+  @api @contact @negative
+  Scenario: Contact form with invalid email format
+    When User submits a contact form with the following details:
+      | name    | John Doe          |
+      | email   | invalid.email     |
+      | phone   | 07358480688       |
+      | subject | Test Subject      |
+      | message | This is a valid message with more than 20 characters |
+    Then API response status code should be 400
+    And Response should indicate invalid email format
+
+  @api @contact @positive
+  Scenario: Contact form with special characters in message
+    When User submits a contact form with the following details:
+      | name    | John Doe & Co.    |
+      | email   | john@example.com  |
+      | phone   | 07358480688       |
+      | subject | Test @Subject#123 |
+      | message | Testing with special chars: !@#$%^&*() and more text |
+    Then API response status code should be 201
+    And Response should contain success confirmation
+
+  @api @contact @positive
+  Scenario: Contact form with maximum length message
+    When User submits a contact form with the following details:
+      | name    | John Doe          |
+      | email   | john@example.com  |
+      | phone   | 07358480688       |
+      | subject | Test Subject      |
+      | message | This is a very long message that contains a lot of details about the inquiry being placed by the user and should be accepted as a valid contact form submission with complete information for follow up purposes |
+    Then API response status code should be 201
+    And Response should contain success confirmation
 
   @api @contact @regression
   Scenario Outline: Submit contact forms with different data variations
@@ -207,10 +420,11 @@ Feature: Shady Meadows B&B Booking API Testing
     Given User launches the application
     When User clicks the Contact tab
     And User enters contact details:
-      | Name    | John Doe      |
-      | Email   | john@test.com |
-      | Phone   | 9876543210    |
-      | Message | Hello Test    |
+      | Name    | John Doe                                      |
+      | Email   | john@test.com                                 |
+      | Phone   | 09876543210                                   |
+      | Subject | Test Subject 1234                             |
+      | Message | Test Message should have above 20 characters |
     And User clicks on Submit button
     Then User should see the submitted details on UI
 

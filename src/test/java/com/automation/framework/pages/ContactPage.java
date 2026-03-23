@@ -188,8 +188,10 @@ public class ContactPage extends BasePage {
     public void enterName(String name) {
         LOGGER.info("Entering name: " + name);
         try {
+            scrollToElement(nameInputLocator);
+            Thread.sleep(200);
             type(nameInputLocator, name);
-            LOGGER.info("Name entered successfully");
+            LOGGER.info("Name entered successfully: " + name);
         } catch (Exception e) {
             LOGGER.error("Failed to enter name: " + e.getMessage());
             throw new RuntimeException("Could not enter name: " + e.getMessage());
@@ -203,8 +205,10 @@ public class ContactPage extends BasePage {
     public void enterEmail(String email) {
         LOGGER.info("Entering email: " + email);
         try {
+            scrollToElement(emailInputLocator);
+            Thread.sleep(200);
             type(emailInputLocator, email);
-            LOGGER.info("Email entered successfully");
+            LOGGER.info("Email entered successfully: " + email);
         } catch (Exception e) {
             LOGGER.error("Failed to enter email: " + e.getMessage());
             throw new RuntimeException("Could not enter email: " + e.getMessage());
@@ -218,11 +222,30 @@ public class ContactPage extends BasePage {
     public void enterPhone(String phone) {
         LOGGER.info("Entering phone: " + phone);
         try {
+            scrollToElement(phoneInputLocator);
+            Thread.sleep(200);
             type(phoneInputLocator, phone);
-            LOGGER.info("Phone entered successfully");
+            LOGGER.info("Phone entered successfully: " + phone);
         } catch (Exception e) {
             LOGGER.error("Failed to enter phone: " + e.getMessage());
             throw new RuntimeException("Could not enter phone: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Enter subject in the contact form
+     * @param subject Subject to enter
+     */
+    public void enterSubject(String subject) {
+        LOGGER.info("Entering subject: " + subject);
+        try {
+            scrollToElement(subjectInputLocator);
+            Thread.sleep(200);
+            type(subjectInputLocator, subject);
+            LOGGER.info("Subject entered successfully: " + subject);
+        } catch (Exception e) {
+            LOGGER.error("Failed to enter subject: " + e.getMessage());
+            throw new RuntimeException("Could not enter subject: " + e.getMessage());
         }
     }
 
@@ -233,8 +256,10 @@ public class ContactPage extends BasePage {
     public void enterMessage(String message) {
         LOGGER.info("Entering message: " + message);
         try {
+            scrollToElement(messageTextareaLocator);
+            Thread.sleep(200);
             type(messageTextareaLocator, message);
-            LOGGER.info("Message entered successfully");
+            LOGGER.info("Message entered successfully: " + message);
         } catch (Exception e) {
             LOGGER.error("Failed to enter message: " + e.getMessage());
             throw new RuntimeException("Could not enter message: " + e.getMessage());
