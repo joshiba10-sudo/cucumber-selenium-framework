@@ -1,7 +1,7 @@
 Feature: Shady Meadows B&B Booking API Testing
 
-  # Background:
-  #   Given Base API URL is set to "https://automationintesting.online/api"
+   //Background:
+    // Given Base API URL is set to "https://automationintesting.online/api"
 
   @smoke @api @regression
   Scenario: Get list of all available rooms
@@ -202,7 +202,7 @@ Feature: Shady Meadows B&B Booking API Testing
 
   # ==================== UI and API Consistency Testing ====================
 
-  @ui @api @integration
+  @ui @api @integration @uiapi
   Scenario: Verify user is able to send message and data is consistent in UI and API
     Given User launches the application
     When User clicks the Contact tab
