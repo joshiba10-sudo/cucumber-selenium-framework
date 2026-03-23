@@ -32,17 +32,29 @@ public class UIAPIConsistencyStepDefinitions {
     private String baseURL;
     private String baseAppURL;
     private ScreenshotUtility screenshotUtility;
+    private BaseClass baseClass;
 
     /**
      * Initialize dependencies through constructor injection
      */
     public UIAPIConsistencyStepDefinitions(BaseClass baseClass) {
-        this.driver = baseClass.getDriver();
+        this.baseClass = baseClass;
         this.baseURL = System.getProperty("base.api.url", "https://automationintesting.online/api");
         this.baseAppURL = System.getProperty("base.app.url", "https://automationintesting.online");
-        this.contactPage = new ContactPage();
         this.screenshotUtility = new ScreenshotUtility();
         this.contactDetails = new HashMap<>();
+    }
+
+    /**
+     * Lazy initialize driver and contactPage
+     */
+    private void initializePageObjects() {
+        if (this.driver == null) {
+            this.driver = baseClass.getDriver();
+        }
+        if (this.contactPage == null) {
+            this.contactPage = new ContactPage();
+        }
     }
 
     /**
@@ -50,8 +62,8 @@ public class UIAPIConsistencyStepDefinitions {
      */
     @Given("User launches the application")
     public void launchApplication() {
+        initializePageObjects();
         contactPage.openContactPage();
-       // driver.navigate().to(baseAppURL);
         screenshotUtility.captureScreenshot("ApplicationLaunched");
     }
 
@@ -60,6 +72,7 @@ public class UIAPIConsistencyStepDefinitions {
      */
     @When("User enters contact details:")
     public void enterContactDetails(DataTable dataTable) {
+        initializePageObjects();
         // Use asMap() to treat first column as keys and second column as values
         Map<String, String> details = dataTable.asMap(String.class, String.class);
 
@@ -92,6 +105,7 @@ public class UIAPIConsistencyStepDefinitions {
 
     @And("User clicks on Submit button")
     public void clickSubmitButton() {
+        initializePageObjects();
         try {
             contactPage.submitForm();
             screenshotUtility.captureScreenshot("FormSubmitted");
@@ -105,6 +119,7 @@ public class UIAPIConsistencyStepDefinitions {
      */
     @Then("User should see the submitted details on UI")
     public void verifySubmittedDetailsOnUI() {
+        initializePageObjects();
         try {
             // Verify success message is displayed
             Assert.assertTrue(contactPage.isSuccessMessageDisplayed(), 
