@@ -50,7 +50,8 @@ public class UIAPIConsistencyStepDefinitions {
      */
     @Given("User launches the application")
     public void launchApplication() {
-        driver.navigate().to(baseAppURL);
+        contactPage.openContactPage();
+       // driver.navigate().to(baseAppURL);
         screenshotUtility.captureScreenshot("ApplicationLaunched");
     }
 
@@ -59,8 +60,8 @@ public class UIAPIConsistencyStepDefinitions {
      */
     @When("User enters contact details:")
     public void enterContactDetails(DataTable dataTable) {
-        List<Map<String, String>> data = dataTable.asMaps(String.class, String.class);
-        Map<String, String> details = data.get(0);
+        // Use asMap() to treat first column as keys and second column as values
+        Map<String, String> details = dataTable.asMap(String.class, String.class);
 
         // Store the details for later comparison
         for (Map.Entry<String, String> entry : details.entrySet()) {
